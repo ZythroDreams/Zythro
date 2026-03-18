@@ -5,14 +5,17 @@ const fs = require("fs");
 
 const app = express();
 
-// ✅ make uploads folder if it doesn't exist (FIXES RENDER ISSUE)
-if (!fs.existsSync("./uploads")) {
-  fs.mkdirSync("./uploads");
+// fix path
+const uploadPath = path.join(__dirname, "uploads");
+
+// create uploads folder if missing
+if (!fs.existsSync(uploadPath)) {
+  fs.mkdirSync(uploadPath);
 }
 
 // storage config
 const storage = multer.diskStorage({
-  destination: "./uploads",
+  destination: uploadPath,
   filename: (req, file, cb) => {
     const uniqueName =
       Date.now() + "-" + Math.round(Math.random() * 1e9);
@@ -20,34 +23,26 @@ const storage = multer.diskStorage({
   },
 });
 
-// upload setup
-const upload = multer({
-  storage,
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB max
-});
+const upload = multer({ storage });
 
-// ✅ serve frontend
-app.use(express.static("public"));
+// serve frontend
+app.use(express.static(path.join(__dirname, "public")));
 
-// ✅ homepage route
-app.get("/", (req, res) => {
-  res.sendFile(__dirname + "/public/index.html");
-});
-
-// ✅ upload route
+// upload route
 app.post("/upload", upload.single("file"), (req, res) => {
-  if (!req.file) {
-    return res.status(400).send("No file uploaded");
-  }
+  if (!req.file) return res.status(400).send("No file");
 
   const fileUrl = `${req.protocol}://${req.get("host")}/files/${req.file.filename}`;
-
   res.json({ url: fileUrl });
 });
 
-// ✅ serve uploaded files
-app.use("/files", express.static("uploads"));
+// serve uploaded files
+app.use("/files", express.static(uploadPath));
 
-// start server
+// fallback (THIS FIXES "Not Found")
+app.get("*", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "index.html"));
+});
+
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log("Server running on port " + PORT));
+app.listen(PORT, () => console.log("Running on " + PORT));
