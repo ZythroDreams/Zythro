@@ -27,4 +27,6 @@ app.use("/files", express.static("uploads"));
 // serve frontend
 app.use(express.static("public"));
 
-app.listen(3000, () => console.log("Server running"));
+app.get("/", (req, res) => {
+  res.sendFile(__dirname + "/public/index.html");
+});
